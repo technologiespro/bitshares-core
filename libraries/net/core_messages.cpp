@@ -88,8 +88,7 @@ FC_REFLECT_DERIVED_NO_TYPENAME( graphene::net::address_info, BOOST_PP_SEQ_NIL,
                                     (last_seen_time)
                                     (latency)
                                     (node_id)
-                                    (direction)
-                                    (firewalled) )
+                                    (direction) )
 FC_REFLECT_DERIVED_NO_TYPENAME( graphene::net::address_message, BOOST_PP_SEQ_NIL, (addresses) )
 FC_REFLECT_DERIVED_NO_TYPENAME( graphene::net::closing_connection_message, BOOST_PP_SEQ_NIL,
                                                   (reason_for_closing)

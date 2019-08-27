@@ -264,7 +264,6 @@ namespace graphene { namespace net {
   };
 
   enum class peer_connection_direction { unknown, inbound, outbound };
-  enum class firewalled_state { unknown, firewalled, not_firewalled };
 
   struct address_info
   {
@@ -273,21 +272,18 @@ namespace graphene { namespace net {
     fc::microseconds          latency;
     node_id_t                 node_id;
     fc::enum_type<uint8_t, peer_connection_direction> direction;
-    fc::enum_type<uint8_t, firewalled_state> firewalled;
 
     address_info() {}
     address_info(const fc::ip::endpoint& remote_endpoint,
                  const fc::time_point_sec last_seen_time,
                  const fc::microseconds latency,
                  const node_id_t& node_id,
-                 peer_connection_direction direction,
-                 firewalled_state firewalled) :
+                 peer_connection_direction direction ) :
       remote_endpoint(remote_endpoint),
       last_seen_time(last_seen_time),
       latency(latency),
       node_id(node_id),
-      direction(direction),
-      firewalled(firewalled)
+      direction(direction)
     {}
   };
 
@@ -392,9 +388,6 @@ FC_REFLECT_ENUM(graphene::net::rejection_reason_code, (unspecified)
 FC_REFLECT_ENUM(graphene::net::peer_connection_direction, (unknown)
                                                      (inbound)
                                                      (outbound))
-FC_REFLECT_ENUM(graphene::net::firewalled_state, (unknown)
-                                            (firewalled)
-                                            (not_firewalled))
 
 FC_REFLECT_TYPENAME( graphene::net::trx_message )
 FC_REFLECT_TYPENAME( graphene::net::block_message )

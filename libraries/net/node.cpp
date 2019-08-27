@@ -208,8 +208,7 @@ namespace graphene { namespace net { namespace detail {
                            fc::time_point_sec(),
                            fc::microseconds(0),
                            node_id_t(),
-                           peer_connection_direction::unknown,
-                           firewalled_state::unknown );
+                           peer_connection_direction::unknown );
                      list.insert(tmp);
                   }
                }
@@ -303,7 +302,6 @@ namespace graphene { namespace net { namespace detail {
       _thread(std::make_shared<fc::thread>("p2p")),
 #endif // P2P_IN_DEDICATED_THREAD
       _delegate(nullptr),
-      _is_firewalled(firewalled_state::unknown),
       _potential_peer_database_updated(false),
       _sync_items_to_fetch_updated(false),
       _suspend_fetching_sync_blocks(false),
@@ -1231,14 +1229,11 @@ namespace graphene { namespace net { namespace detail {
       bool new_information_received = false;
       for (const address_info& address : addresses)
       {
-        if (address.firewalled == graphene::net::firewalled_state::not_firewalled)
-        {
-          potential_peer_record updated_peer_record = _potential_peer_db.lookup_or_create_entry_for_endpoint(address.remote_endpoint);
-          if (address.last_seen_time > updated_peer_record.last_seen_time)
-            new_information_received = true;
-          updated_peer_record.last_seen_time = std::max(address.last_seen_time, updated_peer_record.last_seen_time);
-          _potential_peer_db.update_entry(updated_peer_record);
-        }
+         potential_peer_record updated_peer_record = _potential_peer_db.lookup_or_create_entry_for_endpoint(address.remote_endpoint);
+         if (address.last_seen_time > updated_peer_record.last_seen_time)
+         new_information_received = true;
+         updated_peer_record.last_seen_time = std::max(address.last_seen_time, updated_peer_record.last_seen_time);
+         _potential_peer_db.update_entry(updated_peer_record);
       }
       return new_information_received;
     }
@@ -1533,27 +1528,24 @@ namespace graphene { namespace net { namespace detail {
         else
         {
           // whether we're planning on accepting them as a peer or not, they seem to be a valid node,
-          // so add them to our database if they're not firewalled
+          // so add them to our database
 
           // in the hello message, the peer sent us the IP address and port it thought it was connecting from.
-          // If they match the IP and port we see, we assume that they're actually on the internet and they're not
-          // firewalled.
+          // If they match the IP and port we see, we assume that they're actually on the internet.
           fc::ip::endpoint peers_actual_outbound_endpoint = originating_peer->get_socket().remote_endpoint();
           if( peers_actual_outbound_endpoint.get_address() == originating_peer->inbound_address &&
               peers_actual_outbound_endpoint.port() == originating_peer->outbound_port )
           {
             if( originating_peer->inbound_port == 0 )
             {
-              dlog( "peer does not appear to be firewalled, but they did not give an inbound port so I'm treating them as if they are." );
-              originating_peer->is_firewalled = firewalled_state::firewalled;
+              dlog( "Peer did not give an inbound port so I'm treating them as if they are firewalled." );
             }
             else
             {
-              // peer is not firewalled, add it to our database
+              // add it to our database
               fc::ip::endpoint peers_inbound_endpoint(originating_peer->inbound_address, originating_peer->inbound_port);
               potential_peer_record updated_peer_record = _potential_peer_db.lookup_or_create_entry_for_endpoint(peers_inbound_endpoint);
               _potential_peer_db.update_entry(updated_peer_record);
-              originating_peer->is_firewalled = firewalled_state::not_firewalled;
             }
           }
           else
@@ -1561,7 +1553,6 @@ namespace graphene { namespace net { namespace detail {
             dlog("peer is firewalled: they think their outbound endpoint is ${reported_endpoint}, but I see it as ${actual_endpoint}",
                  ("reported_endpoint", fc::ip::endpoint(originating_peer->inbound_address, originating_peer->outbound_port))
                  ("actual_endpoint", peers_actual_outbound_endpoint));
-            originating_peer->is_firewalled = firewalled_state::firewalled;
           }
 
           if (!is_accepting_new_connections())
@@ -1659,7 +1650,7 @@ namespace graphene { namespace net { namespace detail {
       }
 
       return address_info(*active_peer->get_remote_endpoint(), fc::time_point::now(), active_peer->round_trip_delay,
-         active_peer->node_id, active_peer->direction, active_peer->is_firewalled);
+         active_peer->node_id, active_peer->direction );
    }
 
     void node_impl::on_address_request_message(peer_connection* originating_peer, const address_request_message& address_request_message_received)
@@ -3601,8 +3592,7 @@ namespace graphene { namespace net { namespace detail {
       fc::ip::endpoint local_endpoint(peer->get_socket().local_endpoint());
       uint16_t listening_port = _node_configuration.accept_incoming_connections ? _actual_listening_endpoint.port() : 0;
 
-      if (_is_firewalled == firewalled_state::not_firewalled &&
-          _publicly_visible_listening_endpoint)
+      if ( _publicly_visible_listening_endpoint )
       {
         local_endpoint = *_publicly_visible_listening_endpoint;
         listening_port = _publicly_visible_listening_endpoint->port();
@@ -3626,28 +3616,18 @@ namespace graphene { namespace net { namespace detail {
     {
       VERIFY_CORRECT_THREAD();
 
-      if (!new_peer->performing_firewall_check())
-      {
-        // create or find the database entry for the new peer
-        // if we're connecting to them, we believe they're not firewalled
-        potential_peer_record updated_peer_record = _potential_peer_db.lookup_or_create_entry_for_endpoint(remote_endpoint);
-        updated_peer_record.last_connection_disposition = last_connection_failed;
-        updated_peer_record.last_connection_attempt_time = fc::time_point::now();;
-        _potential_peer_db.update_entry(updated_peer_record);
-      }
-      else
-      {
-        ilog("connecting to peer ${peer} for firewall check", ("peer", new_peer->get_remote_endpoint()));
-      }
+      // create or find the database entry for the new peer
+      // if we're connecting to them, we believe they're not firewalled
+      potential_peer_record updated_peer_record = _potential_peer_db.lookup_or_create_entry_for_endpoint(remote_endpoint);
+      updated_peer_record.last_connection_disposition = last_connection_failed;
+      updated_peer_record.last_connection_attempt_time = fc::time_point::now();;
+      _potential_peer_db.update_entry(updated_peer_record);
 
       fc::oexception connect_failed_exception;
 
       try
       {
         new_peer->connect_to(remote_endpoint, _actual_listening_endpoint);  // blocks until the connection is established and secure connection is negotiated
-
-        // we connected to the peer.  guess they're not firewalled....
-        new_peer->is_firewalled = firewalled_state::not_firewalled;
 
         // connection succeeded, we've started handshaking.  record that in our database
         potential_peer_record updated_peer_record = _potential_peer_db.lookup_or_create_entry_for_endpoint(remote_endpoint);
@@ -4192,7 +4172,6 @@ namespace graphene { namespace net { namespace detail {
         peer_details["version"] = "";
         peer_details["subver"] = peer->user_agent;
         peer_details["inbound"] = peer->direction == peer_connection_direction::inbound;
-        peer_details["firewall_status"] = fc::variant( peer->is_firewalled, 1 );
         peer_details["startingheight"] = "";
         peer_details["banscore"] = "";
         peer_details["syncnode"] = "";
@@ -4399,7 +4378,6 @@ namespace graphene { namespace net { namespace detail {
       info["listening_on"] = _actual_listening_endpoint;
       info["node_public_key"] = fc::variant( _node_public_key, 1 );
       info["node_id"] = fc::variant( _node_id, 1 );
-      info["firewalled"] = fc::variant( _is_firewalled, 1 );
       return info;
     }
     fc::variant_object node_impl::network_get_usage_stats() const
