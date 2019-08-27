@@ -204,7 +204,7 @@ namespace graphene { namespace net
         negotiation_status = connection_negotiation_status::accepted;
         _remote_endpoint = _message_connection.get_socket().remote_endpoint();
 
-        // firewall-detecting info is pretty useless for inbound connections, but initialize
+        // this info is pretty useless for inbound connections, but initialize
         // it the best we can
         fc::ip::endpoint local_endpoint = _message_connection.get_socket().local_endpoint();
         inbound_address = local_endpoint.get_address();

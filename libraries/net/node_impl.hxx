@@ -515,21 +515,6 @@ class node_impl : public peer_connection_delegate
       void on_current_time_reply_message( peer_connection* originating_peer,
                                           const current_time_reply_message& current_time_reply_message_received );
 
-      void forward_firewall_check_to_next_available_peer(firewall_check_state_data* firewall_check_state);
-
-      void send_unable_to_check( peer_connection* peer, const node_id_t& node_id, const fc::ip::endpoint& endpoint );
-      void on_check_firewall_message(peer_connection* originating_peer,
-                                     const check_firewall_message& check_firewall_message_received);
-
-      void on_check_firewall_reply_message(peer_connection* originating_peer,
-                                           const check_firewall_reply_message& check_firewall_reply_message_received);
-
-      void on_get_current_connections_request_message(peer_connection* originating_peer,
-                                                      const get_current_connections_request_message& get_current_connections_request_message_received);
-
-      void on_get_current_connections_reply_message(peer_connection* originating_peer,
-                                                    const get_current_connections_reply_message& get_current_connections_reply_message_received);
-
       void on_connection_closed(peer_connection* originating_peer) override;
 
       void send_sync_block_to_node_delegate(const graphene::net::block_message& block_message_to_send);
@@ -625,8 +610,7 @@ class node_impl : public peer_connection_delegate
 
       bool is_hard_fork_block(uint32_t block_number) const;
       uint32_t get_next_known_hard_fork_block_number(uint32_t block_number) const;
-      fc::ip::endpoint get_endpoint_to_check( peer_connection* originating_peer, 
-            const check_firewall_message& message );
+
     }; // end class node_impl
 
 }}} // end of namespace graphene::net::detail

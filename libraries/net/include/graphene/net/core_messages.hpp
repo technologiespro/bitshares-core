@@ -81,10 +81,6 @@ namespace graphene { namespace net {
     closing_connection_message_type              = 5011,
     current_time_request_message_type            = 5012,
     current_time_reply_message_type              = 5013,
-    check_firewall_message_type                  = 5014,
-    check_firewall_reply_message_type            = 5015,
-    get_current_connections_request_message_type = 5016,
-    get_current_connections_reply_message_type   = 5017,
     core_message_type_last                       = 5099
   };
 
@@ -365,57 +361,6 @@ namespace graphene { namespace net {
     {}
   };
 
-  struct check_firewall_message
-  {
-    static const core_message_type_enum type;
-    node_id_t node_id;
-    fc::ip::endpoint endpoint_to_check;
-  };
-
-  enum class firewall_check_result
-  {
-    unable_to_check,
-    unable_to_connect,
-    connection_successful
-  };
-
-  struct check_firewall_reply_message
-  {
-    static const core_message_type_enum type;
-    node_id_t node_id;
-    fc::ip::endpoint endpoint_checked;
-    fc::enum_type<uint8_t, firewall_check_result> result;
-  };
-
-  struct get_current_connections_request_message
-  {
-    static const core_message_type_enum type;
-  };
-
-  struct current_connection_data
-  {
-    uint32_t           connection_duration; // in seconds
-    fc::ip::endpoint   remote_endpoint;
-    node_id_t          node_id;
-    fc::microseconds   clock_offset;
-    fc::microseconds   round_trip_delay;
-    fc::enum_type<uint8_t, peer_connection_direction> connection_direction;
-    fc::enum_type<uint8_t, firewalled_state> firewalled;
-    fc::variant_object user_data;
-  };
-
-  struct get_current_connections_reply_message
-  {
-    static const core_message_type_enum type;
-    uint32_t upload_rate_one_minute;
-    uint32_t download_rate_one_minute;
-    uint32_t upload_rate_fifteen_minutes;
-    uint32_t download_rate_fifteen_minutes;
-    uint32_t upload_rate_one_hour;
-    uint32_t download_rate_one_hour;
-    std::vector<current_connection_data> current_connections;
-  };
-
 } } // graphene::net
 
 FC_REFLECT_ENUM( graphene::net::core_message_type_enum,
@@ -435,10 +380,6 @@ FC_REFLECT_ENUM( graphene::net::core_message_type_enum,
                  (closing_connection_message_type)
                  (current_time_request_message_type)
                  (current_time_reply_message_type)
-                 (check_firewall_message_type)
-                 (check_firewall_reply_message_type)
-                 (get_current_connections_request_message_type)
-                 (get_current_connections_reply_message_type)
                  (core_message_type_last) )
 FC_REFLECT_ENUM(graphene::net::rejection_reason_code, (unspecified)
                                                  (different_chain)
@@ -454,9 +395,6 @@ FC_REFLECT_ENUM(graphene::net::peer_connection_direction, (unknown)
 FC_REFLECT_ENUM(graphene::net::firewalled_state, (unknown)
                                             (firewalled)
                                             (not_firewalled))
-FC_REFLECT_ENUM(graphene::net::firewall_check_result, (unable_to_check)
-                                                 (unable_to_connect)
-                                                 (connection_successful))
 
 FC_REFLECT_TYPENAME( graphene::net::trx_message )
 FC_REFLECT_TYPENAME( graphene::net::block_message )
@@ -475,11 +413,6 @@ FC_REFLECT_TYPENAME( graphene::net::address_message )
 FC_REFLECT_TYPENAME( graphene::net::closing_connection_message )
 FC_REFLECT_TYPENAME( graphene::net::current_time_request_message )
 FC_REFLECT_TYPENAME( graphene::net::current_time_reply_message )
-FC_REFLECT_TYPENAME( graphene::net::check_firewall_message )
-FC_REFLECT_TYPENAME( graphene::net::check_firewall_reply_message )
-FC_REFLECT_TYPENAME( graphene::net::get_current_connections_request_message )
-FC_REFLECT_TYPENAME( graphene::net::current_connection_data )
-FC_REFLECT_TYPENAME( graphene::net::get_current_connections_reply_message )
 
 GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::trx_message )
 GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::block_message )
@@ -498,11 +431,6 @@ GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::address_message )
 GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::closing_connection_message )
 GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::current_time_request_message )
 GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::current_time_reply_message )
-GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::check_firewall_message )
-GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::check_firewall_reply_message )
-GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::get_current_connections_request_message )
-GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::current_connection_data )
-GRAPHENE_DECLARE_EXTERNAL_SERIALIZATION( graphene::net::get_current_connections_reply_message )
 
 #include <unordered_map>
 #include <fc/crypto/city.hpp>

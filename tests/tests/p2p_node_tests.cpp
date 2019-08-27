@@ -203,12 +203,6 @@ class test_peer : public graphene::net::peer_connection
                message_received = std::make_shared<graphene::net::message>(m);
                break;
             }
-            case graphene::net::core_message_type_enum::check_firewall_reply_message_type :
-            {
-               graphene::net::check_firewall_reply_message m = message_to_send.as<graphene::net::check_firewall_reply_message>();
-               message_received = std::make_shared<graphene::net::message>(m);
-               break;
-            }
             default:
                break;
          }
@@ -229,23 +223,6 @@ void test_address_message( std::shared_ptr<graphene::net::message> msg, std::siz
    {
       BOOST_FAIL( "address_message was null" );
    }
-}
-
-void test_firewall_message( std::shared_ptr<graphene::net::message> msg )
-{
-  if (msg != nullptr)
-   {
-      graphene::net::check_firewall_reply_message fw_msg = 
-            static_cast<graphene::net::check_firewall_reply_message >( 
-            msg->as<graphene::net::check_firewall_reply_message>() );
-      if (fw_msg.result != graphene::net::firewall_check_result::unable_to_check )
-         BOOST_FAIL( "Expected \"Unable to check\"" );
-   } 
-   else 
-   {
-      BOOST_FAIL( "firewall_message was null" );
-   }
-
 }
 
 BOOST_AUTO_TEST_SUITE( p2p_node_tests )
@@ -298,15 +275,6 @@ BOOST_AUTO_TEST_CASE( set_nothing_advertise_algorithm )
       // check the results
       std::shared_ptr<graphene::net::message> msg = peer3_ptr->message_received;
       test_address_message( msg, 0 );
-   }
-
-   // attempt a firewall check, which should return "unable_to_check"
-   {
-      graphene::net::check_firewall_message req;
-      req.endpoint_to_check = fc::ip::endpoint::from_string("127.0.0.1:8080");
-      node1.on_message( peer3_ptr, req );
-      std::shared_ptr<graphene::net::message> msg = peer3_ptr->message_received;
-      test_firewall_message( msg );
    }
 }
 
